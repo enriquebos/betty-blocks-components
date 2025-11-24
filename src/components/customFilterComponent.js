@@ -42,6 +42,8 @@
     } = options;
 
     const isDev = env === 'dev';
+
+    // eslint-disable-next-line no-undef
     const { properties } = !isDev ? artifact : { properties: {} };
 
     const makeId = (len = 16) =>
@@ -71,8 +73,6 @@
 
     const [groups, setGroups] = React.useState(initialState);
     const [groupsOperator, setGroupsOperator] = React.useState('_and');
-    const [additionalFilterGroups, setAdditionalFilterGroups] = useState([]);
-
     const [actionFilter, setActionFilter] = useState(null);
 
     const stringKinds = [
@@ -462,6 +462,60 @@
       return tree;
     };
 
+    const mapCacheRef = useRef({
+      whiteListInput: null,
+      blackListInput: null,
+      whiteList: {},
+      blackList: {},
+      modelId: null,
+      propertiesRef: null,
+      tree: [],
+    });
+
+    const getMappedListsAndTree = () => {
+      const cache = mapCacheRef.current;
+      const whiteListInput = propertyWhiteList || '';
+      const blackListInput = propertyBlacklist || '';
+      const sameLists =
+        cache.whiteListInput === whiteListInput &&
+        cache.blackListInput === blackListInput;
+      const sameModel = cache.modelId === modelId;
+      const sameProperties = cache.propertiesRef === properties;
+
+      if (sameLists && sameModel && sameProperties) {
+        return {
+          mappedWhiteList: cache.whiteList,
+          mappedBlackList: cache.blackList,
+          mappedPropertiesTree: cache.tree,
+        };
+      }
+
+      const mappedWhiteList = mapList(whiteListInput);
+      const mappedBlackList = mapList(blackListInput);
+      const mappedPropertiesTree =
+        modelId && properties
+          ? mapProperties(
+              properties,
+              modelId,
+              0,
+              mappedWhiteList,
+              mappedBlackList,
+            )
+          : [];
+
+      cache.whiteListInput = whiteListInput;
+      cache.blackListInput = blackListInput;
+      cache.whiteList = mappedWhiteList;
+      cache.blackList = mappedBlackList;
+      cache.modelId = modelId;
+      cache.propertiesRef = properties;
+      cache.tree = mappedPropertiesTree;
+
+      return { mappedWhiteList, mappedBlackList, mappedPropertiesTree };
+    };
+
+    const { mappedPropertiesTree } = getMappedListsAndTree();
+
     const filterMappedProperties = (properties = [], id = '') => {
       // Always return the first property if no id is given
       if (id === '') return properties[0];
@@ -622,13 +676,26 @@
         }
       };
 
-      const handleChangeDate = (date, type = 'date') => {
+      const handleChangeDate = (date, keyboardValue = '', type = 'date') => {
+        // Allow manual typing: keep raw input while it's not a valid date
+        const fallbackValue = keyboardValue || '';
+        if (!date) {
+          setRightValueState(fallbackValue);
+          return;
+        }
+
+        const safeDate = date instanceof Date ? date : new Date(date);
+        if (Number.isNaN(safeDate.getTime())) {
+          setRightValueState(fallbackValue);
+          return;
+        }
+
         let newRightValue = '';
 
         if (type === 'date') {
-          newRightValue = date.toISOString().split('T')[0];
+          newRightValue = safeDate.toISOString().split('T')[0];
         } else {
-          newRightValue = date.toISOString();
+          newRightValue = safeDate.toISOString();
         }
 
         setRightValueState(newRightValue);
@@ -689,8 +756,8 @@
                 'aria-label': 'change date',
               }}
               allowKeyboardControl
-              onChange={(date) => {
-                handleChangeDate(date, 'date');
+              onChange={(date, keyboardValue) => {
+                handleChangeDate(date, keyboardValue, 'date');
               }}
               onBlur={handleBlur}
             />
@@ -729,7 +796,9 @@
                 'aria-label': 'change date',
               }}
               allowKeyboardControl
-              onChange={(date) => handleChangeDate(date, 'dateTime')}
+              onChange={(date, keyboardValue) =>
+                handleChangeDate(date, keyboardValue, 'dateTime')
+              }
               onBlur={handleBlur}
             />
           </MuiPickersUtilsProvider>
@@ -820,15 +889,7 @@
     function FilterRow({ row = {}, removeable = false }) {
       if (!modelId) return <p>Please select a model</p>;
 
-      const mappedWhiteList = mapList(propertyWhiteList);
-      const mappedBlackList = mapList(propertyBlacklist);
-      const mappedProperties = mapProperties(
-        properties,
-        modelId,
-        0,
-        mappedWhiteList,
-        mappedBlackList,
-      );
+      const mappedProperties = mappedPropertiesTree;
 
       const [filter, setFilter] = useState(row);
 
@@ -1143,14 +1204,10 @@
     }
 
     const handleApplyFilter = () => {
-      console.log({ groups, additionalFilterGroups });
-      const finalGroup = [...groups, ...additionalFilterGroups];
-      const dataTableFilter = makeFilter(finalGroup);
+      const dataTableFilter = makeFilter(groups);
 
-      console.log({ dataTableFilter, finalGroup });
       B.triggerEvent('onSubmit', dataTableFilter);
-      const filterForAction = makeReadableFilter(makeFilter(finalGroup));
-      console.log({ filterForAction });
+      const filterForAction = makeReadableFilter(makeFilter(groups));
       setActionFilter(filterForAction);
     };
 
