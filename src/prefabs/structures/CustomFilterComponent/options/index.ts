@@ -6,7 +6,6 @@ import {
   ThemeColor,
   model,
   text,
-  showIf
 } from '@betty-blocks/component-sdk';
 import { advanced } from '../advanced';
 
@@ -14,36 +13,47 @@ export const categories = [
   {
     label: 'Data',
     expanded: true,
-    members: [
-      'modelId',
-      'actionVariableId'
-    ],
+    members: ['modelId', 'actionVariableId'],
   },
   {
-    label: 'Filter',
-    expanded: true,
+    label: 'Filter text',
+    expanded: false,
     members: [
       'addFilterRowText',
       'ANDText',
       'ORText',
+      'equalsText',
+      'notEqualsText',
+      'existsText',
+      'notExistsText',
+      'endsWithText',
+      'startsWithText',
+      'matchesText',
+      'notMatchText',
+      'greaterThanText',
+      'lowerThanText',
+      'greaterThanOrEqualText',
+      'lowerThanOrEqualText',
+      'afterText',
+      'beforeText',
+      'afterOrAtText',
+      'beforeOrAtText',
     ],
   },
   {
     label: 'Whitelist / Blacklist',
     expanded: false,
-    members: [
-      'propertyWhiteList',
-      'propertyBlacklist',
-    ],
+    members: ['propertyWhiteList', 'propertyBlacklist'],
+  },
+  {
+    label: 'Remap label items',
+    expanded: false,
+    members: ['labelMapping'],
   },
   {
     label: 'Layout',
     expanded: false,
-    members: [
-      'height',
-      'width',
-      'outerSpacing',
-    ],
+    members: ['height', 'width', 'outerSpacing'],
   },
   {
     label: 'Style',
@@ -60,11 +70,9 @@ export const categories = [
   {
     label: 'Advanced',
     expanded: false,
-    members: [
-      'dataComponentAttribute',
-    ],
+    members: ['dataComponentAttribute'],
   },
-]
+];
 
 export const filterComponentOptions = {
   actionVariableId: option('ACTION_JS_VARIABLE', {
@@ -109,25 +117,78 @@ export const filterComponentOptions = {
     label: 'Background color opacity',
     value: 100,
   }),
-  addFilterRowText: text('Add Filter Row Text', {
+  addFilterRowText: text('Add Filter Row', {
     value: 'Add Filter Row',
   }),
-  ANDText: text('AND Text', {
+  ANDText: text('AND', {
     value: 'AND',
   }),
-  ORText: text('OR Text', {
+  ORText: text('OR', {
     value: 'OR',
+  }),
+  equalsText: text('Equals', {
+    value: 'Equals',
+  }),
+  notEqualsText: text('Does not equal', {
+    value: 'Does not equal',
+  }),
+  existsText: text('Exists', {
+    value: 'Exists',
+  }),
+  notExistsText: text('Does not exist', {
+    value: 'Does not exist',
+  }),
+  endsWithText: text('Ends with', {
+    value: 'Ends with',
+  }),
+  startsWithText: text('Starts with', {
+    value: 'Starts with',
+  }),
+  matchesText: text('Matches', {
+    value: 'Contains',
+  }),
+  notMatchText: text('Does not match', {
+    value: 'Does not contain',
+  }),
+  greaterThanText: text('Greater than', {
+    value: 'Greater than',
+  }),
+  lowerThanText: text('Lower than', {
+    value: 'Lower than',
+  }),
+  greaterThanOrEqualText: text('Greater than or equal to', {
+    value: 'Greater than or equal to',
+  }),
+  lowerThanOrEqualText: text('Lower than or equal to', {
+    value: 'Lower than or equal to',
+  }),
+  afterText: text('After', {
+    value: 'Is after',
+  }),
+  beforeText: text('Before', {
+    value: 'Is before',
+  }),
+  afterOrAtText: text('Is after or at', {
+    value: 'Is after or at',
+  }),
+  beforeOrAtText: text('Is before or at', {
+    value: 'Is before or at',
   }),
   propertyWhiteList: text('Property Whitelist', {
     configuration: {
-      as: 'MULTILINE'
-    }
+      as: 'MULTILINE',
+    },
   }),
   propertyBlacklist: text('Property Blacklist', {
     value: 'id',
     configuration: {
-      as: 'MULTILINE'
-    }
+      as: 'MULTILINE',
+    },
+  }),
+  labelMapping: text('Label mapping (label=newLable,...)', {
+    configuration: {
+      as: 'MULTILINE',
+    },
   }),
   ...advanced,
 };

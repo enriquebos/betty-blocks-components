@@ -19,25 +19,39 @@
       addFilterRowText,
       ANDText,
       ORText,
+      equalsText,
+      notEqualsText,
+      existsText,
+      notExistsText,
+      endsWithText,
+      startsWithText,
+      matchesText,
+      notMatchText,
+      greaterThanText,
+      lowerThanText,
+      greaterThanOrEqualText,
+      lowerThanOrEqualText,
+      afterText,
+      beforeText,
+      afterOrAtText,
+      beforeOrAtText,
       propertyWhiteList,
       propertyBlacklist,
+      labelMapping,
       actionVariableId: name,
     } = options;
+
     const isDev = env === 'dev';
     const { properties } = !isDev ? artifact : { properties: {} };
 
-    const makeId = (length = 16) => {
-      let result = '';
-      const characters =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      const charactersLength = characters.length;
-      for (let i = 0; i < length; i += 1) {
-        result += characters.charAt(
-          Math.floor(Math.random() * charactersLength),
-        );
-      }
-      return result;
-    };
+    const makeId = (len = 16) =>
+      Array.from(
+        { length: len },
+        () =>
+          'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[
+            Math.floor(Math.random() * 62)
+          ],
+      ).join('');
 
     const initialState = [
       {
@@ -57,6 +71,7 @@
 
     const [groups, setGroups] = React.useState(initialState);
     const [groupsOperator, setGroupsOperator] = React.useState('_and');
+    const [additionalFilterGroups, setAdditionalFilterGroups] = useState([]);
 
     const [actionFilter, setActionFilter] = useState(null);
 
@@ -92,82 +107,82 @@
     const operatorList = [
       {
         operator: 'eq',
-        label: 'Equals',
+        label: equalsText || 'Equals',
         kinds: ['*'],
       },
       {
         operator: 'neq',
-        label: 'Does not equal',
+        label: notEqualsText || 'Not equals',
         kinds: ['*'],
       },
       {
         operator: 'ex',
-        label: 'Exists',
+        label: existsText || 'Exists',
         kinds: ['*'],
       },
       {
         operator: 'nex',
-        label: 'Does not exist',
+        label: notExistsText || 'Does not exist',
         kinds: ['*'],
       },
       {
         operator: 'starts_with',
-        label: 'Starts with',
+        label: startsWithText || 'Starts with',
         kinds: [...stringKinds],
       },
       {
         operator: 'ends_with',
-        label: 'Ends with',
+        label: endsWithText || 'Ends with',
         kinds: [...stringKinds],
       },
       {
         operator: 'matches',
-        label: 'Contains',
+        label: matchesText || 'Contains',
         kinds: [...stringKinds],
       },
       {
         operator: 'does_not_match',
-        label: 'Does not contain',
+        label: notMatchText || 'Does not contain',
         kinds: [...stringKinds],
       },
       {
         operator: 'gt',
-        label: 'Greater than',
+        label: greaterThanText || 'Greater than',
         kinds: [...numberKinds],
       },
       {
         operator: 'lt',
-        label: 'Lower than',
+        label: lowerThanText || 'Lower than',
         kinds: [...numberKinds],
       },
       {
         operator: 'gteq',
-        label: 'Greater than or equals',
+        label: greaterThanOrEqualText || 'Greater than or equals to',
         kinds: [...numberKinds],
       },
       {
         operator: 'lteq',
-        label: 'Lower than or equals',
+        label: lowerThanOrEqualText || 'Lower than or equals to',
         kinds: [...numberKinds],
       },
       {
         operator: 'gt',
-        label: 'Is after',
+        label: afterText || 'Is after',
         kinds: [...dateKinds, ...dateTimeKinds],
       },
       {
         operator: 'lt',
-        label: 'Is before',
+        label: beforeText || 'Is before',
         kinds: [...dateKinds, ...dateTimeKinds],
       },
       {
         operator: 'gteg',
-        label: 'Is after or at',
+        label: afterOrAtText || 'Is after or at',
         kinds: [...dateKinds, ...dateTimeKinds],
       },
       {
         operator: 'lteq',
-        label: 'Is before or at',
+        label: beforeOrAtText || 'Is before or at',
         kinds: [...dateKinds, ...dateTimeKinds],
       },
     ];
@@ -190,6 +205,7 @@
         },
       ]);
     });
+
     const handleSetFilterGroups = useCallback((newGroups) => {
       setGroups(newGroups);
     }, []);
@@ -213,6 +229,24 @@
         (op) => op.kinds.includes(kind) || op.kinds.includes('*'),
       );
     };
+
+    const createLabelMapper = (mappingString = '') => {
+      const mapping = {};
+
+      mappingString.split(',').forEach((pair) => {
+        const trimmed = pair.trim();
+        if (!trimmed) return;
+        const [key, value] = trimmed.split('=');
+        if (key && value) {
+          mapping[key.trim()] = value.trim();
+        }
+      });
+
+      // Return a function that looks up a label
+      return (label = '') => mapping[label] || label;
+    };
+
+    const mapLabel = createLabelMapper(labelMapping);
 
     const makeFilterChild = (prop, op, right) => {
       // The prop is stored as a string with a dot notation that represents the path to the property
@@ -455,7 +489,7 @@
             const appendix = properties.length > 0 ? ' »' : '';
             return (
               <MenuItem key={id} value={id}>
-                {label + appendix}
+                {mapLabel(label) + appendix}
               </MenuItem>
             );
           })}
@@ -537,7 +571,7 @@
         >
           {operators.map(({ operator, label }) => (
             <MenuItem key={operator} value={operator}>
-              {label}
+              {mapLabel(label)}
             </MenuItem>
           ))}
         </TextField>
@@ -590,11 +624,13 @@
 
       const handleChangeDate = (date, type = 'date') => {
         let newRightValue = '';
+
         if (type === 'date') {
           newRightValue = date.toISOString().split('T')[0];
         } else {
           newRightValue = date.toISOString();
         }
+
         setRightValueState(newRightValue);
       };
 
@@ -1107,10 +1143,13 @@
     }
 
     const handleApplyFilter = () => {
-      const dataTableFilter = makeFilter(groups);
-      console.log({ dataTableFilter, groups });
+      console.log({ groups, additionalFilterGroups });
+      const finalGroup = [...groups, ...additionalFilterGroups];
+      const dataTableFilter = makeFilter(finalGroup);
+
+      console.log({ dataTableFilter, finalGroup });
       B.triggerEvent('onSubmit', dataTableFilter);
-      const filterForAction = makeReadableFilter(makeFilter(groups));
+      const filterForAction = makeReadableFilter(makeFilter(finalGroup));
       console.log({ filterForAction });
       setActionFilter(filterForAction);
     };
