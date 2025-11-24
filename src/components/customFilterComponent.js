@@ -561,6 +561,7 @@
     function LeftValueInput({
       properties = [],
       level = 0,
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       setRowPropertyValue = (value = '', properties = [], level = 0) => {},
       leftValue = '',
     }) {
