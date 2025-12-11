@@ -572,7 +572,7 @@
         if (level > 0 && properties.length > 0 && value === undefined) {
           setValue(properties[0].id);
         }
-      }, []);
+      }, [level, properties, value]);
 
       const onChange = (e) => {
         const { value } = e.target;
@@ -639,10 +639,6 @@
       setRightValue = (value) => {},
       rightValue: value = '',
     }) {
-      if (operator === 'ex' || operator === 'nex') {
-        return <></>;
-      }
-
       const [rightValue, setRightValueState] = useState(value);
 
       const handleBlur = (e) => {
@@ -703,7 +699,7 @@
       };
 
       if (isSpecialType) {
-        return null;
+        return <></>;
       }
 
       if (isNumberType) {
@@ -888,22 +884,21 @@
     };
 
     function FilterRow({ row = {}, removeable = false }) {
-      if (!modelId) return <p>Please select a model</p>;
-
-      const mappedProperties = mappedPropertiesTree;
-
       const [filter, setFilter] = useState(row);
-
-      // Set default value for propertyValue
-      if (row.propertyValue === '' && mappedProperties.length > 0) {
-        row.propertyValue = mappedProperties[0].id;
-      }
 
       useEffect(() => {
         if (!filter) return;
         if (filter === row) return;
         updateRow(row.rowId, filter);
-      }, [filter]);
+      }, [filter, row]);
+
+      if (!modelId) return <p>Please select a model</p>;
+
+      const mappedProperties = mappedPropertiesTree;
+
+      if (row.propertyValue === '' && mappedProperties.length > 0) {
+        row.propertyValue = mappedProperties[0].id;
+      }
 
       const setPropertyValue = (
         propertyValue = '',
