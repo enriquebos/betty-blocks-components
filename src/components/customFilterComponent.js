@@ -42,8 +42,6 @@
     } = options;
 
     const isDev = env === 'dev';
-
-    // eslint-disable-next-line no-undef
     const { properties } = !isDev ? artifact : { properties: {} };
 
     const makeId = (len = 16) =>
@@ -217,7 +215,6 @@
     const filterProps = (properties, id, inverseId = '') =>
       Object.values(properties).filter(
         (prop) =>
-          // Add all properties besides the forbidden
           prop.modelId === id &&
           !forbiddenKinds.includes(prop.kind) &&
           (inverseId === '' || inverseId !== prop.id),
@@ -242,19 +239,13 @@
         }
       });
 
-      // Return a function that looks up a label
       return (label = '') => mapping[label] || label;
     };
 
     const mapLabel = createLabelMapper(labelMapping);
 
     const makeFilterChild = (prop, op, right) => {
-      // The prop is stored as a string with a dot notation that represents the path to the property
-      console.log({ prop, op, right });
-
       const constructObject = (p, value) => {
-        // Construct an object from a string with dot notation
-        // Example: 'user.name' => { user: { name: value } }
         const array = p.split('.');
         return array.reduceRight((acc, key) => ({ [key]: acc }), value);
       };
@@ -347,7 +338,6 @@
         }
         const foundGroup = group.groups.filter((g) => g.id === groupId);
         if (foundGroup.length === 0) {
-          // eslint-disable-next-line no-param-reassign
           group.groups = updateGroupProperty(
             groupId,
             group.groups,
@@ -370,11 +360,9 @@
       group.map((group) => {
         const foundRow = group.rows.filter((row) => row.rowId === rowId);
         if (foundRow.length === 0) {
-          // eslint-disable-next-line no-param-reassign
           group.groups = deleteFilter(group.groups, rowId);
           return group;
         }
-        // eslint-disable-next-line no-param-reassign
         group.rows = group.rows.filter((row) => row.rowId !== rowId);
         return group;
       });
@@ -390,10 +378,8 @@
         properties.forEach((property, index) => {
           if (!currentObject[property]) {
             if (index === properties.length - 1) {
-              // Last property, set to true
               currentObject[property] = true;
             } else {
-              // Not the last property, create a new level
               currentObject[property] = {};
             }
           }
@@ -427,11 +413,7 @@
       }
 
       const tree = filteredProps
-        .filter(
-          (prop) =>
-            // Prevent recursion by checking if the inverse association is not the same as the parent
-            parent === '' || parent !== prop.inverseAssociationId,
-        )
+        .filter((prop) => parent === '' || parent !== prop.inverseAssociationId)
         .map((prop) => {
           if (
             (prop.kind === 'belongs_to' || prop.kind === 'has_many') &&
@@ -455,10 +437,7 @@
             properties: [],
           };
         })
-        .sort((a, b) =>
-          // Locale compare to sort alphabetically
-          a.label.localeCompare(b.label),
-        );
+        .sort((a, b) => a.label.localeCompare(b.label));
       return tree;
     };
 
@@ -517,7 +496,6 @@
     const { mappedPropertiesTree } = getMappedListsAndTree();
 
     const filterMappedProperties = (properties = [], id = '') => {
-      // Always return the first property if no id is given
       if (id === '') return properties[0];
       return properties.find((prop) => prop.id === id);
     };
@@ -561,7 +539,6 @@
     function LeftValueInput({
       properties = [],
       level = 0,
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       setRowPropertyValue = (value = '', properties = [], level = 0) => {},
       leftValue = '',
     }) {
@@ -640,6 +617,9 @@
       rightValue: value = '',
     }) {
       const [rightValue, setRightValueState] = useState(value);
+      const [dateError, setDateError] = useState(false);
+      const [dateInputValue, setDateInputValue] = useState(value || '');
+      const defaultedDateRef = useRef(false);
 
       const handleBlur = (e) => {
         setRightValue(rightValue);
@@ -674,16 +654,19 @@
       };
 
       const handleChangeDate = (date, keyboardValue = '', type = 'date') => {
-        // Allow manual typing: keep raw input while it's not a valid date
-        const fallbackValue = keyboardValue || '';
+        const inputVal = keyboardValue ?? '';
+        setDateInputValue(inputVal);
+
         if (!date) {
-          setRightValueState(fallbackValue);
+          setRightValueState(inputVal);
+          setDateError(Boolean(inputVal));
           return;
         }
 
         const safeDate = date instanceof Date ? date : new Date(date);
         if (Number.isNaN(safeDate.getTime())) {
-          setRightValueState(fallbackValue);
+          setRightValueState(inputVal);
+          setDateError(Boolean(inputVal));
           return;
         }
 
@@ -696,7 +679,30 @@
         }
 
         setRightValueState(newRightValue);
+        setDateInputValue(inputVal || newRightValue);
+        setDateError(false);
       };
+
+      useEffect(() => {
+        if (
+          !value &&
+          !defaultedDateRef.current &&
+          (isDateType || isDateTimeType)
+        ) {
+          const today = new Date();
+          const defaultValue = isDateType
+            ? today.toISOString().split('T')[0]
+            : today.toISOString();
+          defaultedDateRef.current = true;
+          setRightValueState(defaultValue);
+          setDateInputValue(defaultValue);
+          setRightValue(defaultValue);
+          return;
+        }
+
+        setDateInputValue(value || '');
+        setRightValueState(value);
+      }, [value, isDateType, isDateTimeType, setRightValue]);
 
       if (isSpecialType) {
         return <></>;
@@ -722,13 +728,6 @@
       }
 
       if (isDateType) {
-        // Set default value for date
-        if (rightValue === '') {
-          const today = new Date();
-          setRightValue(today.toISOString().split('T')[0]);
-          // Trigger onBlur to bring inital value to the row
-        }
-
         return (
           <MuiPickersUtilsProvider utils={DateFnsUtils}>
             <KeyboardDatePicker
@@ -739,13 +738,20 @@
                 root: classes.textFieldHighlight,
               }}
               size="small"
-              value={rightValue === '' ? null : rightValue}
+              value={dateError || rightValue === '' ? null : rightValue}
               initialFocusedDate={new Date()}
               style={{ width: '100%', margin: '0px' }}
               variant="inline"
               ampm={false}
               inputVariant="outlined"
               format="dd-MM-yyyy"
+              error={dateError}
+              inputValue={dateInputValue}
+              invalidDateMessage=""
+              helperText=""
+              FormHelperTextProps={{
+                style: { display: 'none' },
+              }}
               inputProps={{
                 'data-type': 'number',
               }}
@@ -763,12 +769,6 @@
       }
 
       if (isDateTimeType) {
-        // Set default value for date
-        if (rightValue === '') {
-          const today = new Date();
-          setRightValue(today.toISOString());
-        }
-
         return (
           <MuiPickersUtilsProvider utils={DateFnsUtils}>
             <KeyboardDateTimePicker
@@ -779,13 +779,20 @@
                 root: classes.textFieldHighlight,
               }}
               size="small"
-              value={rightValue === '' ? null : rightValue}
+              value={dateError || rightValue === '' ? null : rightValue}
               initialFocusedDate={new Date()}
               style={{ width: '100%', margin: '0px' }}
               variant="inline"
               ampm={false}
               inputVariant="outlined"
               format="dd-MM-yyyy HH:mm"
+              error={dateError}
+              inputValue={dateInputValue}
+              invalidDateMessage=""
+              helperText=""
+              FormHelperTextProps={{
+                style: { display: 'none' },
+              }}
               inputProps={{
                 'data-type': 'number',
               }}
@@ -803,7 +810,6 @@
       }
 
       if (isBooleanType) {
-        // Set default value for boolean
         if (rightValue === '') {
           setRightValue(false);
         }
@@ -821,7 +827,6 @@
       }
 
       if (isListType) {
-        // Set default value for list
         if (rightValue === '' && prop.values.length > 0) {
           setRightValue(prop.values[0].value);
         }
@@ -849,7 +854,6 @@
         );
       }
 
-      // Return standard text input by default
       return (
         <TextField
           size="small"
@@ -906,18 +910,14 @@
         level = 0,
       ) => {
         const property = filterMappedProperties(properties, propertyValue);
-        // Split the current value
         let currentValue = filter.propertyValue.split('.');
-        // Set the value of the current level
         currentValue[level] = propertyValue;
 
         if (property.kind === 'belongs_to' || property.kind === 'has_many') {
-          // If the property is a relation, add a default level
           currentValue[level + 1] = properties[0].id;
         }
 
         if (currentValue.length > level + 1) {
-          // Remove all values after the current level
           currentValue = currentValue.slice(0, level + 1);
         }
 
@@ -1036,7 +1036,6 @@
           group.rows.push(newRow);
           return group;
         }
-        // eslint-disable-next-line no-param-reassign
         group.groups = addFilter(group.groups, groupId);
         return group;
       });

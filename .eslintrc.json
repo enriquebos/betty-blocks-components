@@ -47,7 +47,8 @@
     "useRef": "readonly",
     "useMemo": "readonly",
     "useCallback": "readonly",
-    "usePageState": "readonly"
+    "usePageState": "readonly",
+    "artifact": "readonly"
   },
   "rules": {
     "react/react-in-jsx-scope": "off",
